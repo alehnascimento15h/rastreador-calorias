@@ -111,24 +111,58 @@ export async function createMeal(userId: string, meal: Omit<Meal, 'id'>): Promis
 }
 
 export async function getMealsByDate(userId: string, date: Date): Promise<{ data: any[]; error: any }> {
-  const startOfDay = new Date(date);
-  startOfDay.setHours(0, 0, 0, 0);
-  
-  const endOfDay = new Date(date);
-  endOfDay.setHours(23, 59, 59, 999);
+  try {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
 
-  const { data, error } = await supabase
-    .from('meals')
-    .select(`
-      *,
-      food_items (*)
-    `)
-    .eq('user_id', userId)
-    .gte('timestamp', startOfDay.toISOString())
-    .lte('timestamp', endOfDay.toISOString())
-    .order('timestamp', { ascending: false });
+    // Buscar refeições
+    const { data: meals, error: mealsError } = await supabase
+      .from('meals')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('timestamp', startOfDay.toISOString())
+      .lte('timestamp', endOfDay.toISOString())
+      .order('timestamp', { ascending: false });
 
-  return { data: data || [], error };
+    if (mealsError) {
+      console.error('Erro ao buscar refeições:', mealsError);
+      return { data: [], error: mealsError };
+    }
+
+    if (!meals || meals.length === 0) {
+      return { data: [], error: null };
+    }
+
+    // Buscar food_items para cada refeição separadamente
+    const mealIds = meals.map(m => m.id);
+    const { data: foodItems, error: foodError } = await supabase
+      .from('food_items')
+      .select('*')
+      .in('meal_id', mealIds);
+
+    if (foodError) {
+      console.error('Erro ao buscar food items:', foodError);
+      // Retornar refeições sem food_items em caso de erro
+      return { 
+        data: meals.map(meal => ({ ...meal, food_items: [] })), 
+        error: null 
+      };
+    }
+
+    // Combinar meals com seus food_items manualmente
+    const mealsWithFoods = meals.map(meal => ({
+      ...meal,
+      food_items: foodItems?.filter(item => item.meal_id === meal.id) || []
+    }));
+
+    return { data: mealsWithFoods, error: null };
+  } catch (error) {
+    console.error('Erro geral ao carregar refeições:', error);
+    return { data: [], error };
+  }
 }
 
 export async function deleteMeal(mealId: string): Promise<{ error: any }> {

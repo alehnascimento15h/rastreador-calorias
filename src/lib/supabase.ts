@@ -1,9 +1,18 @@
 import { createClient } from '@supabase/supabase-js';
 
+// Usar variáveis de ambiente do lado do cliente (NEXT_PUBLIC_)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Validar se as variáveis estão configuradas
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.warn('⚠️ Supabase não configurado. Configure NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY no arquivo .env.local');
+}
+
+export const supabase = createClient(
+  supabaseUrl || 'https://placeholder.supabase.co', 
+  supabaseAnonKey || 'placeholder-key'
+);
 
 // Tipos do banco de dados
 export interface Database {

@@ -22,11 +22,14 @@ import {
   Zap,
   Watch,
   Bluetooth,
-  Share2
+  Share2,
+  Wallet,
+  DollarSign
 } from 'lucide-react';
 import { MealAnalyzer } from './meal-analyzer';
 import { RunningTracker } from './running-tracker';
 import { SmartWatchConnector } from './smartwatch-connector';
+import { AffiliateWallet } from './affiliate-wallet';
 import { getTrialTimeRemaining, isTrialActive } from '@/lib/subscription';
 import { getMealsByDate, getDailyProgress, getUserStats } from '@/lib/supabase-actions';
 
@@ -40,13 +43,14 @@ export function Dashboard({ profile, userId, onResetProfile }: DashboardProps) {
   const [showMealAnalyzer, setShowMealAnalyzer] = useState(false);
   const [showRunningTracker, setShowRunningTracker] = useState(false);
   const [showSmartWatchConnector, setShowSmartWatchConnector] = useState(false);
+  const [showAffiliateWallet, setShowAffiliateWallet] = useState(false);
   const [smartWatchConnection, setSmartWatchConnection] = useState<SmartWatchConnection>({
     isConnected: false,
   });
   const [dailyProgress, setDailyProgress] = useState<DailyProgress>({
     date: new Date().toISOString().split('T')[0],
     caloriesConsumed: 0,
-    caloriesGoal: profile.dailyCalorieGoal,
+    caloriesGoal: profile.dailyCalorieGoal || 2000,
     meals: [],
     runningActivities: [],
     totalRunningCalories: 0,
@@ -60,6 +64,9 @@ export function Dashboard({ profile, userId, onResetProfile }: DashboardProps) {
   });
   const [loading, setLoading] = useState(true);
 
+  // Gerar código de afiliado se não existir
+  const affiliateCode = profile.affiliateCode || `BR${userId.substring(0, 8).toUpperCase()}`;
+
   // Carregar dados do Supabase
   useEffect(() => {
     loadDashboardData();
@@ -71,7 +78,7 @@ export function Dashboard({ profile, userId, onResetProfile }: DashboardProps) {
       const today = new Date();
 
       // Carregar refeições de hoje
-      const { data: meals, error: mealsError } = await getMealsByDate(userId, today);
+      const { data: mealsData, error: mealsError } = await getMealsByDate(userId, today);
       
       if (mealsError) {
         console.error('Erro ao carregar refeições:', mealsError);
@@ -87,29 +94,36 @@ export function Dashboard({ profile, userId, onResetProfile }: DashboardProps) {
       // Carregar estatísticas
       const userStats = await getUserStats(userId);
 
-      // Converter meals do Supabase para formato Meal
-      const convertedMeals: Meal[] = meals ? meals.map((meal: any) => ({
-        id: meal.id,
-        timestamp: new Date(meal.timestamp),
-        imageUrl: meal.image_url,
-        totalCalories: meal.total_calories,
-        totalProtein: meal.total_protein,
-        totalCarbs: meal.total_carbs,
-        totalFat: meal.total_fat,
-        foods: meal.food_items.map((item: any) => ({
-          name: item.name,
-          calories: item.calories,
-          protein: item.protein,
-          carbs: item.carbs,
-          fat: item.fat,
-          portion: item.portion,
-        })),
-      })) : [];
+      // Converter meals do Supabase para formato Meal com verificações robustas
+      const convertedMeals: Meal[] = Array.isArray(mealsData) && mealsData.length > 0 
+        ? mealsData.map((meal: any) => {
+            // Garantir que food_items sempre seja um array válido
+            const foodItems = Array.isArray(meal.food_items) ? meal.food_items : [];
+            
+            return {
+              id: meal.id,
+              timestamp: new Date(meal.timestamp),
+              imageUrl: meal.image_url || '',
+              totalCalories: meal.total_calories || 0,
+              totalProtein: meal.total_protein || 0,
+              totalCarbs: meal.total_carbs || 0,
+              totalFat: meal.total_fat || 0,
+              foods: foodItems.map((item: any) => ({
+                name: item?.name || 'Item desconhecido',
+                calories: item?.calories || 0,
+                protein: item?.protein || 0,
+                carbs: item?.carbs || 0,
+                fat: item?.fat || 0,
+                portion: item?.portion || 'Porção padrão',
+              })),
+            };
+          })
+        : [];
 
       setDailyProgress({
         date: today.toISOString().split('T')[0],
         caloriesConsumed: progress?.calories_consumed || 0,
-        caloriesGoal: progress?.calories_goal || profile.dailyCalorieGoal,
+        caloriesGoal: progress?.calories_goal || profile.dailyCalorieGoal || 2000,
         meals: convertedMeals,
         runningActivities: [],
         totalRunningCalories: 0,
@@ -222,7 +236,7 @@ export function Dashboard({ profile, userId, onResetProfile }: DashboardProps) {
               <button
                 onClick={handleShareResults}
                 className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
-                title="Compartilhar Resultados"
+                title="Share Results"
               >
                 <Share2 className="w-6 h-6 text-white" />
               </button>
@@ -248,6 +262,27 @@ export function Dashboard({ profile, userId, onResetProfile }: DashboardProps) {
               <Crown className="w-5 h-5 text-yellow-300" />
             </div>
           )}
+
+          {/* Affiliate Card */}
+          <button
+            onClick={() => setShowAffiliateWallet(true)}
+            className="w-full bg-gradient-to-r from-green-500/20 to-blue-500/20 backdrop-blur-sm border border-green-500/30 rounded-lg p-4 flex items-center gap-3 hover:from-green-500/30 hover:to-blue-500/30 transition-all mb-4"
+          >
+            <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-r from-green-400 to-blue-500 rounded-xl flex items-center justify-center">
+              <Wallet className="w-6 h-6 text-white" />
+            </div>
+            <div className="flex-1 text-left">
+              <p className="text-white font-bold text-sm">Programa de Afiliados</p>
+              <p className="text-white/70 text-xs">Ganhe 25% por indicação • Código: {affiliateCode}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="text-right">
+                <div className="text-lg font-bold text-green-400">R$ 275,00</div>
+                <div className="text-xs text-white/70">Disponível</div>
+              </div>
+              <DollarSign className="w-5 h-5 text-green-400" />
+            </div>
+          </button>
 
           {/* SmartWatch Status */}
           {smartWatchConnection.isConnected ? (
@@ -312,7 +347,7 @@ export function Dashboard({ profile, userId, onResetProfile }: DashboardProps) {
           </div>
 
           {/* Running Calories */}
-          {dailyProgress.totalRunningCalories! > 0 && (
+          {(dailyProgress.totalRunningCalories || 0) > 0 && (
             <div className="mt-4 pt-4 border-t border-gray-800">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-green-400 flex items-center gap-2">
@@ -334,7 +369,7 @@ export function Dashboard({ profile, userId, onResetProfile }: DashboardProps) {
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <div className="text-2xl font-bold text-white">{dailyProgress.totalDistance?.toFixed(2)}</div>
+                <div className="text-2xl font-bold text-white">{(dailyProgress.totalDistance || 0).toFixed(2)}</div>
                 <div className="text-sm text-gray-400">km</div>
               </div>
               <div>
@@ -564,6 +599,14 @@ export function Dashboard({ profile, userId, onResetProfile }: DashboardProps) {
           currentConnection={smartWatchConnection}
           onConnect={handleSmartWatchConnect}
           onClose={() => setShowSmartWatchConnector(false)}
+        />
+      )}
+
+      {showAffiliateWallet && (
+        <AffiliateWallet
+          userId={userId}
+          affiliateCode={affiliateCode}
+          onClose={() => setShowAffiliateWallet(false)}
         />
       )}
     </div>

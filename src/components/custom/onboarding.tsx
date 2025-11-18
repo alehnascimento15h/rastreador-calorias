@@ -99,15 +99,24 @@ export function Onboarding({ onComplete }: OnboardingProps) {
     } catch (err: any) {
       console.error('Erro ao finalizar onboarding:', err);
       
-      // Verificar se é erro de configuração do Supabase
-      if (err.message && err.message.includes('Invalid API key')) {
-        setError('⚠️ Configuração do Supabase necessária. Por favor, configure suas credenciais do Supabase nas variáveis de ambiente.');
-      } else if (err.message && err.message.includes('supabaseUrl')) {
-        setError('⚠️ URL do Supabase não configurada. Adicione NEXT_PUBLIC_SUPABASE_URL nas variáveis de ambiente.');
+      // Mensagens de erro mais específicas
+      let errorMessage = 'Erro ao salvar seu perfil. ';
+      
+      if (err.message) {
+        if (err.message.includes('relation') && err.message.includes('does not exist')) {
+          errorMessage = '❌ Tabelas do banco de dados não encontradas. Execute o SQL de criação das tabelas no Supabase primeiro.';
+        } else if (err.message.includes('Invalid API key') || err.message.includes('supabaseUrl')) {
+          errorMessage = '⚠️ Supabase não configurado. Configure as variáveis de ambiente NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY.';
+        } else if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+          errorMessage = '🌐 Erro de conexão. Verifique sua internet ou se o Supabase está acessível.';
+        } else {
+          errorMessage += err.message;
+        }
       } else {
-        setError(err.message || 'Erro ao salvar seu perfil. Verifique se o Supabase está configurado corretamente.');
+        errorMessage += 'Tente novamente.';
       }
       
+      setError(errorMessage);
       setIsSubmitting(false);
     }
   };
@@ -135,16 +144,13 @@ export function Onboarding({ onComplete }: OnboardingProps) {
         </div>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <p className="text-red-400 text-sm font-medium mb-1">Erro ao criar perfil</p>
-              <p className="text-red-300 text-sm">{error}</p>
-              {error.includes('Supabase') && (
-                <p className="text-red-300 text-xs mt-2">
-                  💡 Dica: Verifique se as variáveis NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY estão configuradas.
-                </p>
-              )}
+          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-red-400 text-sm font-medium mb-1">Erro ao criar perfil</p>
+                <p className="text-red-300 text-sm whitespace-pre-line">{error}</p>
+              </div>
             </div>
           </div>
         )}
@@ -287,7 +293,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
             <div className="flex gap-3">
               <Button 
                 onClick={prevStep}
-                className="flex-1 bg-green-500 hover:bg-green-600 text-white"
+                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white"
               >
                 Voltar
               </Button>
@@ -360,7 +366,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
             <div className="flex gap-3">
               <Button 
                 onClick={prevStep}
-                className="flex-1 bg-green-500 hover:bg-green-600 text-white"
+                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white"
               >
                 Voltar
               </Button>
@@ -432,7 +438,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
             <div className="flex gap-3">
               <Button 
                 onClick={prevStep}
-                className="flex-1 bg-green-500 hover:bg-green-600 text-white"
+                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white"
                 disabled={isSubmitting}
               >
                 Voltar
