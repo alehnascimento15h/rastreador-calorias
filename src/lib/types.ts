@@ -29,9 +29,6 @@ export interface UserProfile {
   isRunner?: boolean;
   runningGoal?: 'distance' | 'time' | 'calories' | 'pace';
   weeklyRunningGoal?: number; // km ou minutos
-  // Dados de afiliação
-  affiliateCode?: string; // Código único do afiliado
-  referredBy?: string; // Código de quem indicou
 }
 
 export interface Meal {
@@ -98,48 +95,4 @@ export interface RunningStats {
   averagePace: number; // min/km
   longestRun: number; // km
   totalRuns: number;
-}
-
-// Tipos para sistema de afiliação
-export interface AffiliateData {
-  userId: string;
-  affiliateCode: string;
-  totalReferrals: number;
-  activeReferrals: number;
-  totalEarnings: number; // em reais
-  availableBalance: number; // saldo disponível para saque
-  pendingBalance: number; // saldo pendente (aguardando confirmação)
-  referrals: Referral[];
-  withdrawals: Withdrawal[];
-}
-
-export interface Referral {
-  id: string;
-  referredUserId: string;
-  referredUserName: string;
-  signupDate: Date;
-  status: 'pending' | 'active' | 'cancelled';
-  commissionAmount: number; // 25% do valor da assinatura
-  commissionPaid: boolean;
-  subscriptionValue: number;
-}
-
-export interface Withdrawal {
-  id: string;
-  amount: number;
-  pixKey: string;
-  pixKeyType: 'cpf' | 'email' | 'phone' | 'random';
-  status: 'pending' | 'processing' | 'completed' | 'failed';
-  requestDate: Date;
-  completedDate?: Date;
-  transactionId?: string;
-}
-
-export interface WalletStats {
-  totalEarned: number;
-  availableBalance: number;
-  pendingBalance: number;
-  totalWithdrawn: number;
-  activeReferrals: number;
-  totalReferrals: number;
 }
