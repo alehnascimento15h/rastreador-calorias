@@ -4,6 +4,10 @@ import { UserProfile, Meal, FoodItem, WeightProgress, DailyProgress } from './ty
 // ============ USER PROFILE ============
 
 export async function createUserProfile(profile: UserProfile): Promise<{ data: any; error: any }> {
+  // Calcular data de fim do trial (1 dia a partir de agora)
+  const trialEndDate = new Date();
+  trialEndDate.setDate(trialEndDate.getDate() + 1);
+
   const { data, error } = await supabase
     .from('user_profiles')
     .insert({
@@ -24,6 +28,7 @@ export async function createUserProfile(profile: UserProfile): Promise<{ data: a
       aspirations: [],
       subscription_status: profile.subscriptionStatus,
       trial_start_date: profile.trialStartDate,
+      subscription_end_date: trialEndDate.toISOString(),
     })
     .select()
     .single();

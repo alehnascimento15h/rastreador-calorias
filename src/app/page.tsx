@@ -67,26 +67,22 @@ export default function Home() {
   };
 
   const handleOnboardingComplete = async (profile: UserProfile) => {
-    try {
-      // Salvar perfil no Supabase
-      const { data, error } = await createUserProfile(profile);
+    // Salvar perfil no Supabase
+    const { data, error } = await createUserProfile(profile);
 
-      if (error) {
-        console.error('Erro ao criar perfil:', error);
-        alert('Erro ao salvar perfil. Verifique se o Supabase está configurado corretamente.');
-        return;
-      }
-
-      if (data) {
-        // Salvar ID do usuário no localStorage
-        localStorage.setItem('br-ai-user-id', data.id);
-        setUserId(data.id);
-        setUserProfile(profile);
-      }
-    } catch (error) {
+    if (error) {
       console.error('Erro ao criar perfil:', error);
-      alert('Erro ao salvar perfil. Verifique sua conexão com o Supabase.');
+      throw new Error('Erro ao salvar perfil: ' + (error.message || 'Tente novamente'));
     }
+
+    if (!data) {
+      throw new Error('Erro ao salvar perfil. Tente novamente.');
+    }
+
+    // Salvar ID do usuário no localStorage
+    localStorage.setItem('br-ai-user-id', data.id);
+    setUserId(data.id);
+    setUserProfile(profile);
   };
 
   const handleResetProfile = () => {
